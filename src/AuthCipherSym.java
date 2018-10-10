@@ -26,15 +26,15 @@ public class AuthCipherSym {
     //-cipher serie1-1819i-v2.pdf key.txt
     private static void cipher(Cipher cipher, SecretKey desKey, byte[] keyBytes, String fileName) throws Exception {
 
-        cipher.init(Cipher.ENCRYPT_MODE, desKey);
+        cipher.init(Cipher.ENCRYPT_MODE, desKey,new IvParameterSpec(new byte[]{1,2,3,4,0,0,0,2}));
 
         String fileNameWithoutExtention = fileName.substring(0, fileName.lastIndexOf('.')),
                 fileExtention = fileName.substring(fileName.lastIndexOf('.'), fileName.length());
 
-        String auxCipheredFileName = fileNameWithoutExtention + "-c" + ".pdf";
+        String auxCipheredFileName = fileNameWithoutExtention + "-c" + fileExtention;
 
         FileOutputStream fileOutputStream =
-                new FileOutputStream(new File( auxCipheredFileName));
+                new FileOutputStream(new File(auxCipheredFileName));
         FileInputStream fileInputStream = new FileInputStream(new File(fileName));
         byte[] block = new byte[8]; //DES block size = 64 bytes
         while ((fileInputStream.read(block)) != -1) {
@@ -63,8 +63,12 @@ public class AuthCipherSym {
             mac.update(ibuf, 0, len);
             finalFileOutStream.write(ibuf);
         }*/
-        finalFileOutStream.write(mac.doFinal(cipheredFile)); //tag = 20 bytes
-        finalFileOutStream.write(cipher.getIV()); //iv = 8 bytes
+
+
+        byte[] iv = cipher.getIV();
+        byte[] tag = (mac.doFinal(cipheredFile));
+        finalFileOutStream.write(tag); //tag = 20 bytes
+        finalFileOutStream.write(iv); //iv = 8 bytes
 
         //------------------------------------------
 
@@ -83,7 +87,7 @@ public class AuthCipherSym {
         byte[] iv = new byte[8]; //iv
         is.read(iv);
 
-        cipher.init(Cipher.DECRYPT_MODE, getDesKey(keyBytes), new IvParameterSpec(new byte[8]));
+        cipher.init(Cipher.DECRYPT_MODE, getDesKey(keyBytes), new IvParameterSpec(iv));
 
         String finalFileName = "final_decipher" +fileName.substring(fileName.lastIndexOf('.'), fileName.length());
 
