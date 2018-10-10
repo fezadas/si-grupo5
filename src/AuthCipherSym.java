@@ -4,107 +4,96 @@ import javax.crypto.spec.IvParameterSpec;
 import javax.crypto.spec.SecretKeySpec;
 import java.io.*;
 import java.nio.file.Files;
-import java.security.InvalidKeyException;
-import java.security.NoSuchAlgorithmException;
-import java.security.spec.InvalidKeySpecException;
+import java.util.Arrays;
 
 public class AuthCipherSym {
 
+    private static Cipher cipher;
+    private static Mac mac;
+    private static SecretKey desKey, key;
+    private static String file;
+
     public static void main(String[] args) throws Exception {
 
+        cipher = Cipher.getInstance("DES/CBC/PKCS5Padding");
+        mac = Mac.getInstance("HmacSHA1");
+        file = args[1];
+
         byte[] keyBytes = Files.readAllBytes(new File(args[2]).toPath());
-        Cipher cipher = Cipher.getInstance("DES/CBC/PKCS5Padding");
-        SecretKey key = getDesKey(keyBytes);
+        key = new SecretKeySpec(keyBytes, "HmacSHA1");
+        desKey = SecretKeyFactory.getInstance("DES")
+                .generateSecret(new DESKeySpec(keyBytes)); //key = 8 bytes
 
         switch (args[0]){
-            case "-cipher": cipher(cipher, key, keyBytes, args[1]); break;
-            case "-decipher": decipher(cipher, keyBytes, args[1]); break;
+            case "-cipher": cipher(); break;
+            case "-decipher": decipher(); break;
             default: System.out.println("Invalid command."); break;
         }
     }
 
     //-cipher serie1-1819i-v2.pdf key.txt
-    private static void cipher(Cipher cipher, SecretKey desKey, byte[] keyBytes, String fileName) throws Exception {
+    private static void cipher() throws Exception {
 
-        cipher.init(Cipher.ENCRYPT_MODE, desKey,new IvParameterSpec(new byte[]{1,2,3,4,0,0,0,2}));
+        cipher.init(Cipher.ENCRYPT_MODE, desKey);
 
-        String fileNameWithoutExtention = fileName.substring(0, fileName.lastIndexOf('.')),
-                fileExtention = fileName.substring(fileName.lastIndexOf('.'), fileName.length());
+        String fileName = file.substring(0, file.lastIndexOf('.')),
+                extension = file.substring(file.lastIndexOf('.'), file.length()),
+                auxCipheredFile = "c" + extension;
 
-        String auxCipheredFileName = fileNameWithoutExtention + "-c" + fileExtention;
-
-        FileOutputStream fileOutputStream =
-                new FileOutputStream(new File(auxCipheredFileName));
-        FileInputStream fileInputStream = new FileInputStream(new File(fileName));
+        FileOutputStream out = new FileOutputStream(new File(auxCipheredFile));
+        FileInputStream in = new FileInputStream(file);
         byte[] block = new byte[8]; //DES block size = 64 bytes
-        while ((fileInputStream.read(block)) != -1) {
-            fileOutputStream.write(cipher.update(block));
+        while ((in.read(block)) != -1) {
+            out.write(cipher.update(block));
         }
-        fileOutputStream.write(cipher.doFinal());
-        fileOutputStream.flush();
-        fileOutputStream.close();
+        out.write(cipher.doFinal());
+        out.flush();
+        out.close();
 
-        //------------------------------------------
+        byte[] cipheredFile = Files.readAllBytes(new File(auxCipheredFile).toPath());
 
-        byte[] cipheredFile =
-                Files.readAllBytes(new File(auxCipheredFileName).toPath());
+        //ciphered-file + tag + iv
+        out = new FileOutputStream(fileName + "_ciphered" + extension);
 
-        FileOutputStream finalFileOutStream =
-                new FileOutputStream(fileNameWithoutExtention + "_ciphered" + fileExtention);
-
-        SecretKey key = new SecretKeySpec(keyBytes, "HmacSHA1");
-        Mac mac = Mac.getInstance("HmacSHA1");
         mac.init(key);
-        /*
-        ByteArrayInputStream in = new ByteArrayInputStream(cipheredFile);
-        byte[] ibuf = new byte[20];
-        int len;
-        while ((len = in.read(ibuf)) != -1) {
-            mac.update(ibuf, 0, len);
-            finalFileOutStream.write(ibuf);
-        }*/
+        out.write(mac.doFinal(cipheredFile)); //tag = 20 bytes
 
-
-        byte[] iv = cipher.getIV();
-        byte[] tag = (mac.doFinal(cipheredFile));
-        finalFileOutStream.write(tag); //tag = 20 bytes
-        finalFileOutStream.write(iv); //iv = 8 bytes
-
-        //------------------------------------------
-
-        finalFileOutStream.write(cipheredFile);
-        finalFileOutStream.close();
+        out.write(cipher.getIV()); //iv = 8 bytes
+        out.write(cipheredFile);
+        out.close();
     }
 
     //-decipher serie1-1819i-v2_ciphered.pdf key.txt
-    private static void decipher(Cipher cipher, byte[] keyBytes, String fileName) throws Exception {
+    private static void decipher() throws Exception {
 
-
-        FileInputStream is = new FileInputStream(new File(fileName));
+        FileInputStream is = new FileInputStream(file);
         byte[] tag = new byte[20]; //tag
         is.read(tag);
 
+        //FIXME: errado. verificação corrigir !!
+        /*
+        mac.init(key);
+        byte[] cTag = mac.doFinal(Files.readAllBytes(new File(file).toPath()));
+        if (Arrays.equals(tag, cTag)) {
+            System.out.println("V");
+        } else {
+            System.out.println("F");
+        }
+        */
+
         byte[] iv = new byte[8]; //iv
         is.read(iv);
+        cipher.init(Cipher.DECRYPT_MODE, desKey, new IvParameterSpec(iv));
 
-        cipher.init(Cipher.DECRYPT_MODE, getDesKey(keyBytes), new IvParameterSpec(iv));
-
-        String finalFileName = "final_decipher" +fileName.substring(fileName.lastIndexOf('.'), fileName.length());
-
-        FileOutputStream os = new FileOutputStream(finalFileName);
+        String decFile = file.substring(0, file.indexOf("_ciphered"))
+                    + "_deciphered"
+                    + file.substring(file.lastIndexOf('.'), file.length());
+        FileOutputStream os = new FileOutputStream(decFile);
         byte[] bytes = new byte[8];
         while (is.read(bytes) != -1) {
             os.write(cipher.update(bytes));
         }
-        os.write(cipher.doFinal(bytes));
+        os.write(cipher.doFinal());
         os.close();
-
-        //verificação
-    }
-
-    private static SecretKey getDesKey(byte[] keyBytes) throws Exception{
-        DESKeySpec keySpec = new DESKeySpec(keyBytes);
-        return SecretKeyFactory.getInstance("DES")
-                .generateSecret(keySpec); //key = 8 bytes
     }
 }
