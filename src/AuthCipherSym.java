@@ -67,22 +67,22 @@ public class AuthCipherSym {
     private static void decipher() throws Exception {
 
         FileInputStream is = new FileInputStream(file);
-        byte[] tag = new byte[20]; //tag
+        byte[] tag = new byte[20];
         is.read(tag);
-
-        //FIXME: errado. verificação corrigir !!
-        /*
-        mac.init(key);
-        byte[] cTag = mac.doFinal(Files.readAllBytes(new File(file).toPath()));
-        if (Arrays.equals(tag, cTag)) {
-            System.out.println("V");
-        } else {
-            System.out.println("F");
-        }
-        */
-
-        byte[] iv = new byte[8]; //iv
+        byte[] iv = new byte[8];
         is.read(iv);
+
+        // Verification
+
+        byte[] cipheredFile = Files.readAllBytes(new File(file).toPath());
+        cipheredFile = Arrays.copyOfRange(cipheredFile, 28, cipheredFile.length); //remove tag and iv
+
+        mac.init(key);
+        byte[] cTag = mac.doFinal(cipheredFile);
+        System.out.println(Arrays.equals(tag, cTag) ? "V" : "F");
+
+        // Decryption
+
         cipher.init(Cipher.DECRYPT_MODE, desKey, new IvParameterSpec(iv));
 
         String decFile = file.substring(0, file.indexOf("_ciphered"))
