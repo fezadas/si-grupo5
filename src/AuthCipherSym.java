@@ -42,7 +42,7 @@ public class AuthCipherSym {
 
         FileOutputStream out = new FileOutputStream(new File(auxCipheredFile));
         FileInputStream in = new FileInputStream(file);
-        byte[] block = new byte[8]; //DES block size = 64 bytes
+        byte[] block = new byte[8]; //DES block size = 8 bytes
         while ((in.read(block)) != -1) {
             out.write(cipher.update(block));
         }
