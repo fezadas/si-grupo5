@@ -36,11 +36,10 @@ public class AuthCipherSym {
 
         cipher.init(Cipher.ENCRYPT_MODE, desKey);
 
-        String fileName = file.substring(0, file.lastIndexOf('.')),
-                extension = file.substring(file.lastIndexOf('.'), file.length()),
-                auxCipheredFile = "c" + extension;
+        String fileName = file.substring(0, file.lastIndexOf('.'))+"_ciphered"
+                + file.substring(file.lastIndexOf('.'), file.length());
 
-        FileOutputStream out = new FileOutputStream(new File(auxCipheredFile));
+        FileOutputStream out = new FileOutputStream(new File(fileName));
         FileInputStream in = new FileInputStream(file);
         byte[] block = new byte[8]; //DES block size = 8 bytes
         while ((in.read(block)) != -1) {
@@ -50,10 +49,10 @@ public class AuthCipherSym {
         out.flush();
         out.close();
 
-        byte[] cipheredFile = Files.readAllBytes(new File(auxCipheredFile).toPath());
+        byte[] cipheredFile = Files.readAllBytes(new File(fileName).toPath());
 
         //ciphered-file + tag + iv
-        out = new FileOutputStream(fileName + "_ciphered" + extension);
+        out = new FileOutputStream(fileName);
 
         mac.init(key);
         out.write(mac.doFinal(cipheredFile)); //tag = 20 bytes
