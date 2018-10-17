@@ -12,11 +12,16 @@ public class AssinDigitalRSA {
 
     private static String file;
     private static String hash;
+    private static byte[] data;
+
+    private static final String CERT_DIR = "certs/";
+    private static final String KEYS_DIR = "keys/";
 
     public static void main(String[] args) throws Exception {
 
         hash = args[1].equals("-sha1") ? "SHA1withRSA" : "SHA256withRSA";
         file = args[2];
+        data = Files.readAllBytes(new File(file).toPath());
 
         switch (args[0]){
             case "-sign": sign(args[3], args[4]); break;
@@ -25,33 +30,31 @@ public class AssinDigitalRSA {
         }
     }
 
-    //-sign -sha256 serie1-1819i-v2.pdf Alice_1.pfx changeit
+    //-sign -sha256 serie1-1819i-v2.1.pdf Alice_1.pfx changeit
     private static void sign(String keyFile, String password) throws Exception {
 
         Signature signature = Signature.getInstance(hash);
         signature.initSign(getPrivateKeyFromPfx(keyFile, password));
-
-        byte[] data = Files.readAllBytes(new File(file).toPath());
         signature.update(data);
         byte[] sign = signature.sign();
-
-        FileOutputStream outputStream = new FileOutputStream(new File(file.substring(0, file.length()-4) + ".sign"));
+        FileOutputStream outputStream =
+                new FileOutputStream(new File(file.substring(0, file.lastIndexOf('.')) + ".sign"));
         outputStream.write(sign);
         outputStream.close();
     }
 
-    //-verify -sha256 serie1-1819i-v2.pdf serie1-1819i-v2.sign Alice_1.cer
+    //-verify -sha256 serie1-1819i-v2.1.pdf serie1-1819i-v2.1.sign Alice_1.cer
     private static void verify(String signedFile, String cert) throws Exception {
 
         CertificateFactory certificateFact = CertificateFactory.getInstance("X.509");
-        FileInputStream inputStream = new FileInputStream("certs/" + cert);
-        X509Certificate cer = (X509Certificate) certificateFact.generateCertificate(inputStream);
-        inputStream.close();
-        PublicKey key = cer.getPublicKey();
+        FileInputStream in = new FileInputStream(CERT_DIR + cert);
+        X509Certificate cer = (X509Certificate) certificateFact.generateCertificate(in);
+        in.close();
 
+        PublicKey key = cer.getPublicKey();
         Signature verification = Signature.getInstance(hash);
         verification.initVerify(key);
-        byte[] data = Files.readAllBytes(new File(file).toPath());
+
         byte[] dataSigned = Files.readAllBytes(new File(signedFile).toPath());
         verification.update(data);
 
@@ -60,7 +63,7 @@ public class AssinDigitalRSA {
 
     private static PrivateKey getPrivateKeyFromPfx(String keyFile, String password) throws IOException, KeyStoreException, CertificateException, NoSuchAlgorithmException, UnrecoverableKeyException {
         KeyStore ks = KeyStore.getInstance("PKCS12");
-        try (FileInputStream fin = new FileInputStream("keys/" + keyFile)) {
+        try (FileInputStream fin = new FileInputStream(KEYS_DIR + keyFile)) {
             ks.load(fin, password.toCharArray());
             return (PrivateKey) ks.getKey(ks.aliases().nextElement(), password.toCharArray());
         }

@@ -31,7 +31,7 @@ public class AuthCipherSym {
         }
     }
 
-    //-cipher serie1-1819i-v2.pdf key.txt
+    //-cipher serie1-1819i-v2.1.pdf key.txt
     private static void cipher() throws Exception {
 
         cipher.init(Cipher.ENCRYPT_MODE, desKey);
@@ -46,8 +46,8 @@ public class AuthCipherSym {
             out.write(cipher.update(block));
         }
         out.write(cipher.doFinal());
-        out.flush();
         out.close();
+        in.close();
 
         byte[] cipheredFile = Files.readAllBytes(new File(fileName).toPath());
 
@@ -62,7 +62,7 @@ public class AuthCipherSym {
         out.close();
     }
 
-    //-decipher serie1-1819i-v2_ciphered.pdf key.txt
+    //-decipher serie1-1819i-v2.1_ciphered.pdf key.txt
     private static void decipher() throws Exception {
 
         FileInputStream is = new FileInputStream(file);
@@ -78,7 +78,7 @@ public class AuthCipherSym {
 
         mac.init(key);
         byte[] cTag = mac.doFinal(cipheredFile);
-        System.out.println(Arrays.equals(tag, cTag) ? "V" : "F");
+        System.out.println(Arrays.equals(tag, cTag) ? "Valid Authentication" : "Invalid Authentication");
 
         // Decryption
 
