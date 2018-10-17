@@ -38,8 +38,9 @@ public class AuthCipherSym {
 
         String fileName = file.substring(0, file.lastIndexOf('.')) + "_ciphered"
                 + file.substring(file.lastIndexOf('.'), file.length());
+        String auxName = "auxCipher";
 
-        FileOutputStream out = new FileOutputStream(new File(fileName));
+        FileOutputStream out = new FileOutputStream(new File(auxName));
         FileInputStream in = new FileInputStream(file);
         byte[] block = new byte[8]; //DES block size = 8 bytes
         while ((in.read(block)) != -1) {
@@ -49,16 +50,20 @@ public class AuthCipherSym {
         out.close();
         in.close();
 
-        byte[] cipheredFile = Files.readAllBytes(new File(fileName).toPath());
-
         //ciphered-file + tag + iv
         out = new FileOutputStream(fileName);
 
         mac.init(key);
-        out.write(mac.doFinal(cipheredFile)); //tag = 20 bytes
+
+        FileInputStream fileInputStream = new FileInputStream(new File(auxName));
+        updateInBlocks(fileInputStream,mac);
+        fileInputStream.close();
+
+        out.write(mac.doFinal()); //tag = 20 bytes
 
         out.write(cipher.getIV()); //iv = 8 bytes
-        out.write(cipheredFile);
+
+        writeInFile(auxName,out);
         out.close();
     }
 
@@ -73,15 +78,16 @@ public class AuthCipherSym {
 
         // Verification
 
-        byte[] cipheredFile = Files.readAllBytes(new File(file).toPath());
-        cipheredFile = Arrays.copyOfRange(cipheredFile, 28, cipheredFile.length); //remove tag and iv
-
         mac.init(key);
-        byte[] cTag = mac.doFinal(cipheredFile);
+        updateInBlocks(is,mac);
+        byte[] cTag = mac.doFinal();
         System.out.println(Arrays.equals(tag, cTag) ? "Valid Authentication" : "Invalid Authentication");
+        is.close();
 
         // Decryption
 
+        is = new FileInputStream(file);
+        is.read(new byte[28]);
         cipher.init(Cipher.DECRYPT_MODE, desKey, new IvParameterSpec(iv));
 
         String decFile = file.substring(0, file.indexOf("_ciphered"))
@@ -94,5 +100,23 @@ public class AuthCipherSym {
         }
         os.write(cipher.doFinal());
         os.close();
+    }
+
+    private static void updateInBlocks (FileInputStream fileInputStream, Mac mac) throws Exception {
+        byte[] block = new byte[1024];
+        int read;
+        while((read =fileInputStream.read(block))!=-1){
+            mac.update(block,0 ,read);
+        }
+    }
+
+    private static void writeInFile (String fileName, OutputStream out) throws Exception {
+        FileInputStream fileInputStream = new FileInputStream(new File(fileName));
+        byte[] block = new byte[1024];
+        int read;
+        while((read =fileInputStream.read(block))!=-1){
+           out.write(block,0,read);
+        }
+        fileInputStream.close();
     }
 }
