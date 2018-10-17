@@ -31,7 +31,6 @@ public class AssinDigitalRSA {
     }
 
     //-sign -sha256 serie1-1819i-v2.1.pdf Alice_1.pfx changeit
-    //-sign -sha256 serie1-1819i-v2.1.pdf Bob_1.pfx changeit
     private static void sign(String keyFile, String password) throws Exception {
 
         Signature signature = Signature.getInstance(hash);
@@ -45,7 +44,6 @@ public class AssinDigitalRSA {
     }
 
     //-verify -sha256 serie1-1819i-v2.1.pdf serie1-1819i-v2.1.sign Alice_1.cer
-    //-verify -sha256 serie1-1819i-v2.1.pdf serie1-1819i-v2.1.sign Bob_1.cer
     private static void verify(String signedFile, String cert) throws Exception {
 
         CertificateFactory certificateFact = CertificateFactory.getInstance("X.509");
