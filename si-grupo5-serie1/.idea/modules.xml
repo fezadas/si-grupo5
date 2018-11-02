@@ -2,7 +2,9 @@
 <project version="4">
   <component name="ProjectModuleManager">
     <modules>
-      <module fileurl="file://$PROJECT_DIR$/si-grupo5-serie1.iml" filepath="$PROJECT_DIR$/si-grupo5-serie1.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/si-grupo05-serie1.iml" filepath="$PROJECT_DIR$/.idea/modules/si-grupo05-serie1.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/si-grupo05-serie1_main.iml" filepath="$PROJECT_DIR$/.idea/modules/si-grupo05-serie1_main.iml" group="si-grupo05-serie1" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/si-grupo05-serie1_test.iml" filepath="$PROJECT_DIR$/.idea/modules/si-grupo05-serie1_test.iml" group="si-grupo05-serie1" />
     </modules>
   </component>
 </project>
