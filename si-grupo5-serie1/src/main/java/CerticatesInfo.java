@@ -16,7 +16,7 @@ public class CerticatesInfo {
     public static void main(String[] args) throws Exception {
         SSLSocketFactory factory = (SSLSocketFactory) SSLSocketFactory.getDefault();
 
-        /*String[] supportedCS = factory.getDefaultCipherSuites();
+        /*String[] supportedCS = factory.getSupportedCipherSuites();
         for (String cs : supportedCS) {
             System.out.println(cs);
         }*/
@@ -25,10 +25,12 @@ public class CerticatesInfo {
         socket.startHandshake();
 
         SSLSession session = socket.getSession();
-        Certificate[] certificates = session.getLocalCertificates();
+        Certificate[] certificates = session.getPeerCertificates();
 
         for (Certificate cert:certificates) {
-            System.out.println(cert.getType());
+            if(cert instanceof X509Certificate) {
+                X509Certificate x = (X509Certificate ) cert;
+                System.out.println(x.t());
         }
 
         System.out.println("Selected protocol: "+ session.getProtocol());
@@ -36,6 +38,7 @@ public class CerticatesInfo {
 
         socket.close();
     }
+}
 }
 
 
