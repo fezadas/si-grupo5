@@ -106,52 +106,68 @@ app.get('/dropboxcallback',(req,resp)=>{
 
                 request
                     .get({
-                        url: 'https://www.googleapis.com/drive/v3/files/1XhrlKkdMgAxgayK9UkFeaAeSiZiKRJ2G?'+'alt=media',
+                        url: 'https://www.googleapis.com/drive/v2/files/1yY6PJ6ikqWpDHvnJ3tXd3ccuxSuwThYO',
                         headers: {
                             Authorization: "Bearer "+access_token
                         }   
                     },
                     (err, res, body) => {
 
-                            var tempFileName = __dirname+'/tmp/file'
+                            var google_file_json = JSON.parse(body);
+                            let downloadUrl = google_file_json.downloadUrl
+
+                            var tempFileName = __dirname + "/tmp/file.txt"
 
                             var dest = fs.createWriteStream(tempFileName)
                             //var readStream = fs.createReadStream(tempFileName);
-                            let content 
-
-                            dest.write(body, function() {
-                                console.log('Now the data has been written.')
-                                });
-
-                            //readStream.pipe(content);
-
-                            fs.readFile(tempFileName, (err, data) => {
-                                if (err) throw err;
-                                content = data
+                         
+                            request
+                            .get({
+                                url: downloadUrl,
+                                headers: {
+                                    Authorization: "Bearer "+access_token
+                                }   
+                            },
+                            (err, res, body) => {
+                                dest.write(body, function() {
+                                    console.log('Now the data has been written.')
+                                    });
+    
+                                //readStream.pipe(content);
+    
+                                //leitura tem de ser sincrona ou assicrona ??
+    
+                                fs.readFile(tempFileName, (err, data) => {
+                                    if (err) throw err;
+                                    let content = data
+    
+                                    var json ={
+                                        path: "/Homework/file.txt",
+                                        mode: 'add',
+                                        autorename: false,
+                                        mute: false,
+                                        strict_conflict: false
+                                    }
+        
+                                    request
+                                        .post('https://content.dropboxapi.com/2/files/upload', {
+                                            headers: {
+                                                Authorization: "Bearer "+dropbox_access_token,
+                                                'Dropbox-API-Arg':JSON.stringify(json),
+                                                'Content-Type': 'application/octet-stream'
+                                                //'Content-Type': 'application/vnd.openxmlformats-officedocument.presentationml.presentation'
+                                                    },
+                                            body: content
+                                            },
+                                            (err, res, body) => {
+                                                console.log(body)
+                                                console.log('finished')
+                                            })
+                            })
+                           
                             });
                             
-                        
-
-                            request
-                                .post('https://content.dropboxapi.com/2/files/upload', {
-                                    headers: {
-                                        Authorization: "Bearer "+dropbox_access_token,
-                                        'Dropbox-API-Arg':{
-                                            path: "/Homework/math/Matrices.txt",
-                                            mode: "add",
-                                            autorename: false,
-                                            mute: false,
-                                            strict_conflict: false
-                                        },
-                                        'Content-Type': 'application/octet-stream'
-                                        //'Content-Type': 'application/vnd.openxmlformats-officedocument.presentationml.presentation'
-                                            },
-                                    body: content
-                                    },
-                                    (err, res, body) => {
-                                        console.log(body)
-                                        console.log('finished')
-                                    })
+                            
                 })
                         }
                     );
