@@ -6,6 +6,9 @@ const fs = require('fs')
 
 const port = 3001
 
+app.set('view engine', 'hbs')
+hbs.registerPartials('./views/partials')
+
 // system variables where RP credentials are stored
 const CLIENT_ID = process.env.CLIENT_ID
 const CLIENT_SECRET = process.env.CLIENT_SECRET
@@ -24,11 +27,8 @@ app.listen(port, (err) => {
 })
 
 app.get('/', (req, resp) => {
-    resp.send('<a href=/login>Use Google Account</a>')
+    resp.render('home.hbs')
 })
-
-// More information at:
-//  https://developers.google.com/identity/protocols/OpenIDConnect
 
 app.get('/login', (req, resp) => {
     resp.redirect(302,
@@ -46,8 +46,6 @@ app.get('/login', (req, resp) => {
 
 app.get('/googlecallback', (req, resp) => {
     console.log('making request to token endpoint')
-    // https://www.npmjs.com/package/request#examples
-    // content-type: application/x-www-form-urlencoded (URL-Encoded Forms)
     request
         .post(
             { 
@@ -66,30 +64,19 @@ app.get('/googlecallback', (req, resp) => {
                 // send code and id_token to user-agent, just for debug purpose
                 var json_response = JSON.parse(body);
                 access_token = json_response.access_token
-                request
-                    .get({
-                        url: 'https://www.googleapis.com/drive/v3/files',
-                        headers: {
-                            Authorization: "Bearer "+access_token
-                        }   
-                    },
-                (err, res, body) => {
-                    console.log(body)
-                    resp.redirect(302,'https://www.dropbox.com/oauth2/authorize?client_id='+DROPBOX_KEY+
-                    '&response_type=code&redirect_uri=http://localhost:3001/dropboxcallback')
-                })
+
+                resp.redirect(302,'https://www.dropbox.com/oauth2/authorize?client_id='+DROPBOX_KEY+
+                '&response_type=code&redirect_uri=http://localhost:3001/dropboxcallback')
             }
         );
 })
 
-
-app.get('/dropboxcallback',(req,resp)=>{
+app.get('/dropboxcallback',(req,resp) => {
 
     request
         .post(
             { 
                 url: 'https://api.dropbox.com/1/oauth2/token',
-                // body parameters
                 form: {
                     code: req.query.code,
                     client_id: DROPBOX_KEY,
@@ -100,79 +87,127 @@ app.get('/dropboxcallback',(req,resp)=>{
             }, 
             function(err,httpResponse,body){
                 console.log(body);
-                // send code and id_token to user-agent, just for debug purpose
                 var json_response = JSON.parse(body);
                 dropbox_access_token = json_response.access_token
+                
+                resp.redirect(302,'/googleDriveFiles')
+            })
+    
+    function uploadDropbox(data, fileName){
+    
+        var json ={
+            path: "/GoogleDriveFiles/"+fileName,
+            mode: 'add',
+            autorename: false,
+            mute: false,
+            strict_conflict: false
+        }
+        request
+            .post('https://content.dropboxapi.com/2/files/upload', {
+                headers: {
+                    Authorization: "Bearer "+dropbox_access_token,
+                    'Dropbox-API-Arg':JSON.stringify(json),
+                    'Content-Type': 'application/octet-stream'
+                        },
+                body: data
+                },
+                (err, res, body) => {
+                    console.log(body)
+                    console.log('Finished Copy.')
+        })
+    }
+    })
 
+app.get('/googleDriveFiles',(req,resp) => {
+    request
+            .get({
+                url: 'https://www.googleapis.com/drive/v3/files',
+                headers: {
+                    Authorization: "Bearer "+access_token
+                }   
+            },
+            (err, res, body) => {
+                var info = JSON.parse(body)
+                var list = info.files.map(file => {
+                    return {
+                        id : file.id,
+                        name : file.name,
+                    }
+            })
+            resp.render('googlefiles.hbs',{files:list})
+    })
+})
+
+app.get('/googleDriveFiles/file',(req,resp) => {
+    const id = req.query.id
+    resp.render('googlefile.hbs',{id:id})
+})
+
+app.get('/uploadFile/file',(req,resp) => {
+    const id = req.query.id
+    request
+            .get({
+                url: 'https://www.googleapis.com/drive/v2/files/'+id,
+                headers: {
+                    Authorization: "Bearer "+access_token
+                }   
+            },
+            (err, res, body) => {
+
+                var google_file_json = JSON.parse(body);
+                let downloadUrl = google_file_json.downloadUrl
+                let fileExtension = google_file_json.fileExtension
+                let fileName = google_file_json.title
+                var tempFileName = __dirname+ "/tmp/file." + fileExtension
+
+                var dest = fs.createWriteStream(tempFileName)
+            
                 request
                     .get({
-                        url: 'https://www.googleapis.com/drive/v2/files/1yY6PJ6ikqWpDHvnJ3tXd3ccuxSuwThYO',
+                        url: downloadUrl,
                         headers: {
                             Authorization: "Bearer "+access_token
                         }   
                     },
                     (err, res, body) => {
 
-                            var google_file_json = JSON.parse(body);
-                            let downloadUrl = google_file_json.downloadUrl
-
-                            var tempFileName = __dirname + "/tmp/file.txt"
-
-                            var dest = fs.createWriteStream(tempFileName)
-                            //var readStream = fs.createReadStream(tempFileName);
-                         
-                            request
-                            .get({
-                                url: downloadUrl,
-                                headers: {
-                                    Authorization: "Bearer "+access_token
-                                }   
-                            },
-                            (err, res, body) => {
-                                dest.write(body, function() {
-                                    console.log('Now the data has been written.')
-                                    });
-    
-                                //readStream.pipe(content);
-    
-                                //leitura tem de ser sincrona ou assicrona ??
-    
-                                fs.readFile(tempFileName, (err, data) => {
-                                    if (err) throw err;
-                                    let content = data
-    
-                                    var json ={
-                                        path: "/Homework/file.txt",
-                                        mode: 'add',
-                                        autorename: false,
-                                        mute: false,
-                                        strict_conflict: false
-                                    }
-        
-                                    request
-                                        .post('https://content.dropboxapi.com/2/files/upload', {
-                                            headers: {
-                                                Authorization: "Bearer "+dropbox_access_token,
-                                                'Dropbox-API-Arg':JSON.stringify(json),
-                                                'Content-Type': 'application/octet-stream'
-                                                //'Content-Type': 'application/vnd.openxmlformats-officedocument.presentationml.presentation'
-                                                    },
-                                            body: content
-                                            },
-                                            (err, res, body) => {
-                                                console.log(body)
-                                                console.log('finished')
-                                            })
-                            })
-                           
+                        dest.write(body, function() {
+                            console.log('Now the data has been written on the temp file.')
                             });
-                            
-                            
-                })
-                        }
-                    );
-                })
 
+                        fs.readFile(tempFileName, (err, data) => {
+                            if (err) throw err;
+                            uploadDropbox(data,fileName)   
+                        resp.redirect(302,'/updateDone')
+                    })
+                });
+            })
+})
 
+app.get('/updateDone',(req,resp) => {
+    resp.render('updateDone.hbs')
+})
 
+function uploadDropbox(data, fileName){
 
+    var json ={
+        path: "/GoogleDriveFiles/"+fileName,
+        mode: 'add',
+        autorename: false,
+        mute: false,
+        strict_conflict: false
+    }
+    request
+        .post('https://content.dropboxapi.com/2/files/upload', {
+            headers: {
+                Authorization: "Bearer "+dropbox_access_token,
+                'Dropbox-API-Arg':JSON.stringify(json),
+                'Content-Type': 'application/octet-stream'
+                    },
+            body: data
+            },
+            (err, res, body) => {
+                console.log(body)
+                console.log('Finished Copy.')
+    })
+}

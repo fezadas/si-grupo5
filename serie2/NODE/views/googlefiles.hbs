@@ -1,0 +1,30 @@
+<head>
+    {{> head}}
+</head>
+
+<body>
+
+<table class="ui celled padded table">
+  <thead>
+    <th style="text-align:center">File Name</th>
+    <th style="text-align:center">Identifier</th>
+  </tr></thead>
+  <tbody>
+      {{#each files}}
+      <tr>
+          <td>
+        <h4  class="ui center aligned header">
+          {{name}}
+        </h2>
+      </td>
+      <td>
+        <h4 class="ui center aligned header">
+          <a href="/googleDriveFiles/file?id={{id}}">{{id}} </a>
+        </h2>
+      </td>
+    </tr>
+      {{/each}}
+  </tbody>
+</table>  
+
+</body>
