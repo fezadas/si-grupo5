@@ -7,21 +7,21 @@
 <table class="ui celled padded table">
   <thead>
     <th style="text-align:center">File Name</th>
-    <th style="text-align:center">Identifier</th>
+    <th style="text-align:center">Size</th>
   </tr></thead>
   <tbody>
       {{#each files}}
       <tr>
-          <td>
-        <h4  class="ui center aligned header">
-          {{name}}
-        </h2>
+      <td>
+        <h4 class="ui center aligned header">
+          <a href="/googleDriveFiles/file?id={{id}}&name={{name}}">{{name}} </a>
+        </h4>
       </td>
       <td>
         <h4 class="ui center aligned header">
-          <a href="/googleDriveFiles/file?id={{id}}">{{id}} </a>
-        </h2>
-      </td>
+          {{size}} Bytes
+        </h4>
+        </td>
     </tr>
       {{/each}}
   </tbody>
