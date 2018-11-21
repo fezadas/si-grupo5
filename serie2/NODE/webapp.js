@@ -53,7 +53,6 @@ app.get('/googlecallback', (req, resp) => {
         .post(
             { 
                 url: 'https://www.googleapis.com/oauth2/v3/token',
-                // body parameters
                 form: {
                     code: req.query.code,
                     client_id: CLIENT_ID,
@@ -64,7 +63,6 @@ app.get('/googlecallback', (req, resp) => {
             }, 
             function(err,httpResponse,body){
                 console.log(body);
-                // send code and id_token to user-agent, just for debug purpose
                 var json_response = JSON.parse(body);
                 let id = Math.random()
                 resp.setHeader('Set-Cookie', [DRIVE_COOKIE_ID+"="+id]);
